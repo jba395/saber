@@ -48,5 +48,3 @@ class Bible:
             f"{BIBLE_ENDPOINT}/{version_id}/{book_object['id']}/{chapter}.json"
         )
         return response.json()
-
-    
