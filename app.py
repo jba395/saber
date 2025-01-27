@@ -29,6 +29,7 @@ def get_version(version_id: str) -> dict:
     except Exception:
         return "Server error", 500
 
+
 @app.route("/version/<version_id>/verse/random_id")
 def get_random_verse_id(version_id: str) -> dict:
     """
