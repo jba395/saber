@@ -72,4 +72,3 @@ class Processor:
             f"{version_id}.json",
             json.dumps(verse_index_map)
         )
-        
