@@ -278,13 +278,6 @@ def set_game_event(version_id: str, game_id: str) -> dict:
 
         midpoint_lower = (lower_bound + upper_bound) // 2
         midpoint_upper = midpoint_lower + 1
-    
-    elif event_type == constants.EVENT_TYPE_COMPLETE:
-
-        # Found verse
-        if body["verse_id"] == game["selected_verse_index"]:
-            game["end_time"] = time.time()
-            lower_bound, midpoint_lower, midpoint_upper, upper_bound = body["verse_id"]
 
     else:
         return f"Invalid event type: {event_type}", 400
@@ -315,12 +308,12 @@ def set_game_event(version_id: str, game_id: str) -> dict:
     # Two same-side values match AND one of those values matches the goal
     if \
     (new_event["midpoint_lower"]["id"] == new_event["lower_bound"]["id"] and \
-    new_event["midpoint_lower"]["id"] == game["selected_verse_index"]) \
+    new_event["midpoint_lower"]["id"] == int(game["selected_verse_index"])) \
     or \
     (new_event["midpoint_upper"]["id"] == new_event["upper_bound"]["id"] and \
-    new_event["midpoint_upper"]["id"] == game["selected_verse_index"]):
+    new_event["midpoint_upper"]["id"] == int(game["selected_verse_index"])):
         game["end_time"] = time.time()
-        new_event["type"] = "complete"
+        new_event["type"] = constants.EVENT_TYPE_COMPLETE
 
     game_log[game_id]["events"].append(new_event)
     return new_event
