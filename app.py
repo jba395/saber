@@ -299,8 +299,8 @@ def set_game_event(version_id: str, game_id: str) -> dict:
             "verse": scripture[str(midpoint_lower)]
         },
         "midpoint_upper": {
-            "id": midpoint_upper,
-            "verse": scripture[str(midpoint_upper)]
+            "id": min(midpoint_upper, upper_bound),
+            "verse": scripture[str(min(midpoint_upper, upper_bound))]
         },
         "upper_bound": {
             "id": upper_bound,
@@ -310,6 +310,17 @@ def set_game_event(version_id: str, game_id: str) -> dict:
         "start_time": game["start_time"],
         "current_time": time.time()
     }
+
+    # Check for victory conditions
+    # Two same-side values match AND one of those values matches the goal
+    if \
+    (new_event["midpoint_lower"]["id"] == new_event["lower_bound"]["id"] and \
+    new_event["midpoint_lower"]["id"] == game["selected_verse_index"]) \
+    or
+    (new_event["midpoint_upper"]["id"] == new_event["upper_bound"]["id"] and \
+    new_event["midpoint_upper"]["id"] == game["selected_verse_index"]):
+        game["end_time"] = time.time()
+        new_event["type"] = "complete"
 
     game_log[game_id]["events"].append(new_event)
     return new_event
