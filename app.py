@@ -169,22 +169,23 @@ def begin_game(version_id: str) -> str:
             "events": [
                 {
                     "type": "init",
-                    "timestamp": time.time()
+                    "start_time": time.time(),
+                    "current_time": time.time(),
                     "lower_bound": {
-                        "id": lower_bound
-                        "verse": scripture[lower_bound]
+                        "id": lower_bound,
+                        "verse": scripture[str(lower_bound)]
                     },
                     "midpoint_lower": {
                         "id": midpoint_lower,
-                        "verse": scripture[midpoint_lower]
-                    }
+                        "verse": scripture[str(midpoint_lower)]
+                    },
                     "midpoint_upper": {
                         "id": midpoint_upper,
-                        "verse": scripture[midpoint_upper]
-                    }
+                        "verse": scripture[str(midpoint_upper)]
+                    },
                     "upper_bound": {
                         "id": upper_bound,
-                        "verse": scripture[upper_bound]
+                        "verse": scripture[str(upper_bound)]
                     }
                 }
             ]
@@ -195,12 +196,18 @@ def begin_game(version_id: str) -> str:
 @app.route("/version/<version_id>/game/<game_id>")
 @cross_origin(origin="*")
 def get_game_state(version_id: str, game_id: str) -> dict:
+    try:
+        result = game_log[game_id]
+    except KeyError:
+        return f"Invalid game ID: {game_id}", 404
+    except Exception:
+        return "Server error", 500
     return game_log[game_id]
 
 
 @app.route("/version/<version_id>/game/<game_id>/event", methods=["POST"])
 @cross_origin(origin="*")
-def set_game_event():
+def set_game_event(version_id: str, game_id: str) -> dict:
     """
     Create a new game event.
     Body:
@@ -226,51 +233,83 @@ def set_game_event():
         body = request.get_json()
         event_type = body["event_type"]
         if event_type not in constants.VALID_EVENT_TYPES:
+            print(f"Invalid event type: {event_type}")
             return f"Invalid event type: {event_type}", 400
-    except Exception:
+    except Exception as e:
+        print(e)
+        print("Body is either missing or has the wrong key")
         return "Body is either missing or has the wrong key", 400
 
     # Handle each event type
     if event_type == constants.EVENT_TYPE_LOWER:
-        pass
+        
+        # Select the lower half
+        lower_bound = game["events"][len(game["events"]) - 1]["lower_bound"]["id"] # Same as before
+        upper_bound = game["events"][len(game["events"]) - 1]["midpoint_lower"]["id"] # Previous midpoint lower
+
+        midpoint_lower = (lower_bound + upper_bound) // 2
+        midpoint_upper = midpoint_lower + 1
+    
     elif event_type == constants.EVENT_TYPE_UPPER:
-        pass
+
+        # Select the upper half
+        lower_bound = game["events"][len(game["events"]) - 1]["midpoint_upper"]["id"] # Previous midpoint upper
+        upper_bound = game["events"][len(game["events"]) - 1]["upper_bound"]["id"] # Same as before
+
+        midpoint_lower = (lower_bound + upper_bound) // 2
+        midpoint_upper = midpoint_lower + 1
+
     elif event_type == constants.EVENT_TYPE_BACK:
-        lower_bound = game[events][len(game[events]) - 2]["lower_bound"]
-        midpoint_lower = game[events][len(game[events]) - 2]["midpoint_lower"]
-        midpoint_upper = game[events][len(game[events]) - 2]["midpoint_upper"]
-        upper_bound = game[events][len(game[events]) - 2]["upper_bound"]
+
+        # Determine new spacing
+        previous_event = game["events"][len(game["events"]) - 1]
+        prev_lower_gap = int(previous_event["midpoint_lower"]["id"]) - int(previous_event["lower_bound"]["id"])
+        prev_upper_gap = int(previous_event["upper_bound"]["id"]) - int(previous_event["midpoint_upper"]["id"])
+        new_gap = max(prev_lower_gap * 2, prev_upper_gap * 2)
+
+        lower_bound = max(
+            int(previous_event["midpoint_lower"]["id"]) - new_gap, 
+            game["global_lower_bound"]
+        )
+        upper_bound = min(
+            int(previous_event["midpoint_upper"]["id"]) + new_gap, 
+            game["global_upper_bound"]
+        )
+
+        midpoint_lower = game["events"][len(game["events"]) - 2]["midpoint_lower"]["id"]
+        midpoint_upper = game["events"][len(game["events"]) - 2]["midpoint_upper"]["id"]
+    
     elif event_type == constants.EVENT_TYPE_COMPLETE:
-        pass
+
+        # Found verse
+        if body["verse_id"] == game["selected_verse_index"]:
+            game["end_time"] = time.time()
+            lower_bound, midpoint_lower, midpoint_upper, upper_bound = body["verse_id"]
+
     else:
         return f"Invalid event type: {event_type}", 400
 
     new_event = {
         "lower_bound": {
             "id": lower_bound,
-            "verse": scripture[lower_bound]
-        }
+            "verse": scripture[str(lower_bound)]
+        },
         "midpoint_lower": {
             "id": midpoint_lower,
-            "verse": scripture[midpoint_lower]
-        }
+            "verse": scripture[str(midpoint_lower)]
+        },
         "midpoint_upper": {
             "id": midpoint_upper,
-            "verse": scripture[midpoint_upper]
-        }
+            "verse": scripture[str(midpoint_upper)]
+        },
         "upper_bound": {
             "id": upper_bound,
-            "verse": scripture[upper_bound]
-        }
+            "verse": scripture[str(upper_bound)]
+        },
         "type": event_type,
-        "timestamp": time.time()
+        "start_time": game["start_time"],
+        "current_time": time.time()
     }
 
-    game_log[game_id][events].append(new_event)
+    game_log[game_id]["events"].append(new_event)
     return new_event
-
-
-@app.route("/version/<version_id>/game/<game_id>/upper", methods=["POST"])
-@cross_origin(origin="*")
-def set_game_event_upper():
-    pass
