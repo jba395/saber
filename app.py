@@ -265,7 +265,7 @@ def set_game_event(version_id: str, game_id: str) -> dict:
         previous_event = game["events"][len(game["events"]) - 1]
         prev_lower_gap = int(previous_event["midpoint_lower"]["id"]) - int(previous_event["lower_bound"]["id"])
         prev_upper_gap = int(previous_event["upper_bound"]["id"]) - int(previous_event["midpoint_upper"]["id"])
-        new_gap = max(prev_lower_gap * 2, prev_upper_gap * 2)
+        new_gap = max(prev_lower_gap * 2, prev_upper_gap * 2, 10)
 
         lower_bound = max(
             int(previous_event["midpoint_lower"]["id"]) - new_gap, 
@@ -276,8 +276,8 @@ def set_game_event(version_id: str, game_id: str) -> dict:
             game["global_upper_bound"]
         )
 
-        midpoint_lower = game["events"][len(game["events"]) - 2]["midpoint_lower"]["id"]
-        midpoint_upper = game["events"][len(game["events"]) - 2]["midpoint_upper"]["id"]
+        midpoint_lower = (lower_bound + upper_bound) // 2
+        midpoint_upper = midpoint_lower + 1
     
     elif event_type == constants.EVENT_TYPE_COMPLETE:
 
@@ -316,7 +316,7 @@ def set_game_event(version_id: str, game_id: str) -> dict:
     if \
     (new_event["midpoint_lower"]["id"] == new_event["lower_bound"]["id"] and \
     new_event["midpoint_lower"]["id"] == game["selected_verse_index"]) \
-    or
+    or \
     (new_event["midpoint_upper"]["id"] == new_event["upper_bound"]["id"] and \
     new_event["midpoint_upper"]["id"] == game["selected_verse_index"]):
         game["end_time"] = time.time()
